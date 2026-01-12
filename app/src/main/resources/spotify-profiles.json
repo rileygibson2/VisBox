@@ -1,0 +1,16 @@
+{
+    "profiles": {
+        "riley": {
+            "refresh_token": "..."
+        },
+        "lane": {
+            "refresh_token": "..."
+        },
+        "guest": {
+            "refresh_token": "..."
+        }
+    },
+    "active_profile": "riley",
+    "client_id": "your-client-id-here",
+    "redirect_uri": "http://localhost:8888/callback"
+}
