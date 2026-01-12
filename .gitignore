@@ -3,6 +3,8 @@
 build/
 */build/
 
+*/resources/audio/
+
 # Ignore Gradle build output directory
 build
 
