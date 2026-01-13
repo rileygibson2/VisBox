@@ -2,6 +2,8 @@ package visbox;
 
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
@@ -9,8 +11,14 @@ import javax.swing.Timer;
 import javax.swing.UIManager;
 
 import visbox.logger.Logger;
+import visbox.ui.UI;
 import visbox.visualiser.Visualiser;
+import visbox.visualiser.bars.ClassicBars;
+import visbox.visualiser.bars.ClipBounce;
 import visbox.visualiser.bars.RoundedBars;
+import visbox.visualiser.histograms.ClassicHistogram;
+import visbox.visualiser.lines.Mouth;
+import visbox.visualiser.particles.ParticleBars;
 
 public class VBMain {
     
@@ -18,9 +26,12 @@ public class VBMain {
     private JFrame frame;
     private AudioManager audioManager;
     private Analyser analyser;
-    private Visualiser currVisualiser;
     private ColorManager colorManager;
     private UI ui;
+
+    private HashMap<String, Visualiser> visualisers;
+    private ArrayList<String> displayNames;
+    private Visualiser currVisualiser;
     
     private static final int TARGET_FPS = 60;
     private Timer timer;
@@ -34,16 +45,22 @@ public class VBMain {
     }
     
     public AudioManager getAudioManager() {return audioManager;}
+
+    public Analyser getAnalyser() {return analyser;}
+
+    public ColorManager getColorManager() {return colorManager;}
+
+    public UI getUI() {return ui;}
     
     public Visualiser getCurrentVisualiser() {return currVisualiser;}
 
-    public ColorManager getColorManager() {return colorManager;}
+    public ArrayList<String> getDisplayNames() {return displayNames;}
     
     private void setup() {
         Logger.info("Setting up");
         
         // Setup JFrame
-        ui = new UI(this);
+        ui = new UI();
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {}
@@ -62,11 +79,40 @@ public class VBMain {
                 }
             });
         });
+        ui.setupKeyBindings();
         
         analyser = new Analyser();
         audioManager = new AudioManager(analyser);
         colorManager = new ColorManager();
-        currVisualiser = new RoundedBars(analyser, colorManager);
+        initialiseVisualisers();
+    }
+
+    private void initialiseVisualisers() {
+        visualisers = new HashMap<String, Visualiser>();
+        displayNames = new ArrayList<String>();
+        addVisualiser(new ClassicBars());
+        addVisualiser(new ClipBounce());
+        addVisualiser(new RoundedBars());
+
+        addVisualiser(new ClassicHistogram());
+        addVisualiser(new Mouth());
+        addVisualiser(new ParticleBars());
+
+        setCurrentVisualiser("ClipBounce");
+    }
+
+    private void addVisualiser(Visualiser v) {
+        visualisers.put(v.getDisplayName(), v);
+        displayNames.add(v.getDisplayName());
+    }
+
+    public void setCurrentVisualiser(String displayName) {
+        if (displayName==null) return;
+        Visualiser v = visualisers.get(displayName);
+        if (v==null) return;
+
+        Logger.info("Switching visualiser: "+displayName);
+        currVisualiser = v;
         currVisualiser.activate(analyser.getNewConfig());
     }
     

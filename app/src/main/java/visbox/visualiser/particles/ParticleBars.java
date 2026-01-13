@@ -16,8 +16,8 @@ public class ParticleBars extends ParticleVisualiser {
     private BufferedImage glowBuffer;
     private ArrayList<Particle> particles;
     
-    public ParticleBars(Analyser analyzer, ColorManager colorManager) {
-        super(analyzer, colorManager, 16);
+    public ParticleBars() {
+        super("ParticleBars", 16);
         this.bands = new float[numBands];
         this.particles = new ArrayList<Particle>();
     }

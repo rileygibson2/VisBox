@@ -15,8 +15,8 @@ public class ClipBounce extends BarVisualiser {
     private float[] velocitys;
     private BufferedImage glowBuffer;
     
-    public ClipBounce(Analyser analyzer, ColorManager colorManager) {
-        super(analyzer, colorManager, 90);
+    public ClipBounce() {
+        super("ClipBounce", 30);
         this.velocitys = new float[numBands];
         for (int i=0; i<numBands; i++) velocitys[i] = 0f;
     }
@@ -71,12 +71,12 @@ public class ClipBounce extends BarVisualiser {
     public void render(Graphics2D g, int w, int h) {
         float bandW = (float) w/(numBands*2);
         float size = bandW*0.8f;
-        float hue = 0.03f;
+        float hue = 0.9f;
         
         // Fade glow buffer
         if (glowBuffer==null) glowBuffer = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         Graphics2D gg = glowBuffer.createGraphics();
-        gg.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.08f));
+        gg.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.8f));
         gg.setColor(new Color(0f, 0f, 0f, 1f));
         gg.fillRect(0, 0, w, h);
         
@@ -92,23 +92,21 @@ public class ClipBounce extends BarVisualiser {
             float r = bandW*0.8f;
 
             Color c = ColorManager.hsvToColor(hue, (float) (1f-Math.pow(v, 0.6f)), 1f);
-            gg.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.25f+(0.4f*v)));
+            gg.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f+(0.4f*v)));
             gg.setPaint(new RadialGradientPaint(
                 x, y, r,
                 new float[]{0f, 1f},
                 new Color[] {new Color(c.getRed(), c.getGreen(), c.getBlue(), 255), new Color(c.getRed(), c.getGreen(), c.getBlue(), 0)}
             ));
-            gg.setColor(c);
             gg.fillOval((int) (x-r), (int) (y-r), (int) (2*r), (int) (2*r));
 
             c = ColorManager.hsvToColor(hue, (float) (1f-Math.pow(v1, 0.6f)), 1f);
-            gg.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.08f+(0.4f*v1)));
+            gg.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f+(0.4f*v1)));
             gg.setPaint(new RadialGradientPaint(
                 x1, y1, r,
                 new float[]{0f, 1f},
                 new Color[] {new Color(c.getRed(), c.getGreen(), c.getBlue(), 255), new Color(c.getRed(), c.getGreen(), c.getBlue(), 0)}
             ));
-            gg.setColor(c);
             gg.fillOval((int) (x1-r), (int) (y1-r), (int) (2*r), (int) (2*r));
         }
 

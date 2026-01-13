@@ -14,8 +14,8 @@ public abstract class BarVisualiser extends Visualiser {
     
     protected float[] bandReal;
     
-    public BarVisualiser(Analyser analyzer, ColorManager colorManager, int numBands) {
-        super(analyzer, colorManager, numBands);
+    public BarVisualiser(String displayName, int numBands) {
+        super(displayName, numBands);
         this.bandReal = new float[numBands];
     }
 }

@@ -13,6 +13,7 @@ import java.util.List;
 import visbox.Analyser;
 import visbox.Analyser.AnalyserConfig;
 import visbox.ColorManager;
+import visbox.VBMain;
 
 public class Mouth extends LineVisualiser {
     
@@ -24,8 +25,8 @@ public class Mouth extends LineVisualiser {
     private float GAMMA = 1.1f;
     
     private float maxOffset = -1f;
-    private float offsetDelta = 15;
-    private float tailLen = 50;
+    private float offsetDelta = 15f; // 15
+    private float tailLen = -1f;
     
     private class HistSample {
         float v;
@@ -39,14 +40,14 @@ public class Mouth extends LineVisualiser {
         }
     }
     
-    public Mouth(Analyser analyser, ColorManager colorManager) {
-        super(analyser, colorManager, -1);
+    public Mouth() {
+        super("Mouth", -1);
     }
     
     @Override
     public void activate(AnalyserConfig a) {
         super.activate(a);
-        colorManager.setHue(0f, -0.2f); // 0 0.8
+        VBMain.getInstance().getColorManager().setHue(0f, -0.2f); // 0 0.8
     }
     
     @Override
@@ -55,32 +56,28 @@ public class Mouth extends LineVisualiser {
         
         float level;
         boolean update = false;
+        Analyser analyser = VBMain.getInstance().getAnalyser();
         synchronized (analyser) {
             long tick = analyser.getAmpTick();
             if (tick!=lastAmpTick) update = true;
             level = analyser.getCurrentLevel();
             lastAmpTick = tick;
-            
-            /*level = 0.5f;
-            if (VBMain.isTimeIncrement(50)) update = true;
-            else if (VBMain.isTimeIncrement(10)) {
-                level = 0f;
-                update = true;
-            }*/
         }
         
-        // Shape and clamp
         if (update) {
+            // Shape and clamp
             level = (float) Math.pow(level*GAIN, GAMMA);
             level = Math.max(0, Math.min(1f, level));
             if (level<0.05f) level = 0f;
 
+            // Smooth
             if (level>=bgAmp) {
                 bgAmp = level*4;
                 if (bgAmp>1f) bgAmp = 1f;
             }
         }
         else {
+            // Decay
             bgAmp -= 0.02f;
             if (bgAmp<0f) bgAmp = 0f;
         }
@@ -95,7 +92,8 @@ public class Mouth extends LineVisualiser {
                     
                     // Decay if in tail zone
                     if (s.pos>=maxOffset-tailLen) {
-                        s.v-=s.oV/(tailLen/offsetDelta);
+                        s.v-= s.oV/(tailLen/offsetDelta);
+                        //s.v -= s.oV/tailLen
                         if (s.v<0f) s.v = 0f;
                     }
                     if (s.v<0f) s.v = 0f;
@@ -106,13 +104,17 @@ public class Mouth extends LineVisualiser {
             
             // Add new
             if (update) history.add(0, new HistSample(level, 0));
+
         }
     }
     
     @Override
     public void render(Graphics2D g2, int width, int height) {
+        ColorManager colorManager = VBMain.getInstance().getColorManager();
+        
         // Set maxOffset
-        maxOffset = (width/2)*0.96f;
+        if (maxOffset==-1) maxOffset = (width/2)*1.2f;
+        if (tailLen==-1) tailLen = (width/2)*0.4f;
         
         g2.setColor(Color.BLACK);
         g2.fillRect(0, 0, width, height);
@@ -136,19 +138,19 @@ public class Mouth extends LineVisualiser {
         float yC = height*0.5f;
         float yIC = height*0.5f;
         
-        int n = (history.size())*2+4;
+        int n = (history.size())*2;
         float[] xs = new float[n];
         float[] ys = new float[n];
         float[] ysI = new float[n];
         
         // Fill in edge points
-        xs[0] = 0; ys[0] = yC; ysI[0] = yIC;
-        xs[1] = width*0.02f; ys[1] = yC; ysI[1] = yIC;
-        xs[n-2] = width-(width*0.02f); ys[n-2] = yC; ysI[n-2] = yIC;
-        xs[n-1] = width; ys[n-1] = yC; ysI[n-1] = yIC;
+        //xs[0] = 0; ys[0] = yC; ysI[0] = yIC;
+        //xs[1] = width*0.02f; ys[1] = yC; ysI[1] = yIC;
+        //xs[n-2] = width-(width*0.02f); ys[n-2] = yC; ysI[n-2] = yIC;
+        //xs[n-1] = width; ys[n-1] = yC; ysI[n-1] = yIC;
         
-        int l = history.size()+1;
-        int r = history.size()+2;
+        int l = history.size()-1;
+        int r = history.size();
         
         synchronized (history) {
             for (HistSample s : history) {
@@ -190,8 +192,8 @@ public class Mouth extends LineVisualiser {
 
         rP = new RadialGradientPaint(width*0.5f, height*0.5f, width*0.5f, fracs, cols, CycleMethod.NO_CYCLE);
         g2.setPaint(rP);
-        g2.setStroke(new BasicStroke(5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
+        g2.setStroke(new BasicStroke((float) (2.5f+5f*Math.pow(bgAmp, 1.6f)), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        //g2.setColor(Color.WHITE);
         g2.draw(path1);
         g2.draw(path2);
     }

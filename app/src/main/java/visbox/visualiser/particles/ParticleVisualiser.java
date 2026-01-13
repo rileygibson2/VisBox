@@ -21,7 +21,7 @@ public abstract class ParticleVisualiser extends Visualiser {
     }
     
     
-    public ParticleVisualiser(Analyser analyzer, ColorManager colorManager, int numBands) {
-        super(analyzer, colorManager, numBands);
+    public ParticleVisualiser(String displayName, int numBands) {
+        super(displayName, numBands);
     }
 }

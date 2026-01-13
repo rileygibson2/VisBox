@@ -14,15 +14,9 @@ public abstract class LineVisualiser extends Visualiser {
     protected LineVisualiserType type;
     
     
-    public LineVisualiser(Analyser analyzer, ColorManager colorManager, int numBands) {
-        super(analyzer, colorManager, numBands);
+    public LineVisualiser(String displayName, int numBands) {
+        super(displayName, numBands);
         this.type = LineVisualiserType.MOUTH;
-    }
-    
-    @Override
-    public void activate(AnalyserConfig a) {
-        if (a==null) a = analyser.getNewConfig();
-        analyser.setConfig(a);
     }
 
     @Override

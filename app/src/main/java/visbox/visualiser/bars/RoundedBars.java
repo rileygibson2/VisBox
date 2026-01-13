@@ -14,8 +14,8 @@ public class RoundedBars extends BarVisualiser {
     private float[] velocitys;
     private BufferedImage glowBuffer;
     
-    public RoundedBars(Analyser analyzer, ColorManager colorManager) {
-        super(analyzer, colorManager, 20);
+    public RoundedBars() {
+        super("RoundedBars", 20);
         this.velocitys = new float[numBands];
         for (int i=0; i<numBands; i++) velocitys[i] = 0f;
     }
