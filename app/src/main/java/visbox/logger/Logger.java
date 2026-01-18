@@ -33,11 +33,11 @@ public class Logger {
     public static void debug(String m) {debug(getCaller().getSimpleName(), m);}
 
     public static void debugAt(long t, String m) {
-        if (VBMain.getGlobalTime()==t) debug(getCaller().getSimpleName(), m);
+        if (VBMain.getGlobalTick()==t) debug(getCaller().getSimpleName(), m);
     }
 
     public static void debugAtInterval(long i, String m) {
-        if (VBMain.getGlobalTime()%i==0) debug(getCaller().getSimpleName(), m);
+        if (VBMain.getGlobalTick()%i==0) debug(getCaller().getSimpleName(), m);
     }
     
     public static void error(String m) {

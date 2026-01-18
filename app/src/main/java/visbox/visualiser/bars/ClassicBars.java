@@ -79,4 +79,10 @@ public class ClassicBars extends BarVisualiser {
             }
         }
     }
+
+    @Override
+    public void render() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'render'");
+    }
 }

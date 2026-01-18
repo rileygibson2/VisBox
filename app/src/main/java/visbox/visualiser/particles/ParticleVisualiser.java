@@ -15,13 +15,16 @@ public abstract class ParticleVisualiser extends Visualiser {
         float x, y;
         float vx, vy;
         float life;
+        float maxLife;
         float hue, sat;
         float brightness;
         int band;
     }
     
+    protected float[] bandLast;
     
     public ParticleVisualiser(String displayName, int numBands) {
         super(displayName, numBands);
+        this.bandLast = new float[numBands];
     }
 }

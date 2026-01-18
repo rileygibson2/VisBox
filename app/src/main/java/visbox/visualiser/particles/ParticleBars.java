@@ -127,4 +127,10 @@ public class ParticleBars extends ParticleVisualiser {
         g.setColor(Color.WHITE);
         g.drawString("C: "+particles.size(), 10, 15);
     }
+
+    @Override
+    public void render() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'render'");
+    }
 }

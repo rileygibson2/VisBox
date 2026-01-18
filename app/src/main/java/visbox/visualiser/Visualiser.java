@@ -32,4 +32,6 @@ public abstract class Visualiser {
     }
 
     public abstract void render(Graphics2D g, int w, int h);
+
+    public abstract void render();
 }

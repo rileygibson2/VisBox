@@ -39,7 +39,7 @@ public class UI extends JPanel {
         am.put("leftPressed", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                VBMain.getInstance().getUI().keyPressed(-1);
+                //VBMain.getInstance().getUI().keyPressed(-1);
             }
         });
 
@@ -47,7 +47,7 @@ public class UI extends JPanel {
         am.put("rightPressed", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                VBMain.getInstance().getUI().keyPressed(1);
+                //VBMain.getInstance().getUI().keyPressed(1);
             }
         });
     }

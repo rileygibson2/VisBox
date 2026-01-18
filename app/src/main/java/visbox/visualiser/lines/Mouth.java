@@ -231,4 +231,10 @@ public class Mouth extends LineVisualiser {
         }
         return path;
     }
+
+    @Override
+    public void render() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'render'");
+    }
 }

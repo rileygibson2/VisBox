@@ -85,4 +85,10 @@ public class ClassicHistogram extends HistogramVisualiser {
         
         g.drawImage(img, 0, 0, null);
     }
+
+    @Override
+    public void render() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'render'");
+    }
 }

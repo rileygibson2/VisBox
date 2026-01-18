@@ -41,6 +41,7 @@ public class Analyser {
     private int[] bandBinEnd;        // per band: end bin index (exclusive)
     
     // Controls
+    private boolean configured;
     private int NUM_BANDS;
     private int AMP_WINDOW; // Effective amp sample size for rms
     private float MIN_FQ;
@@ -66,6 +67,7 @@ public class Analyser {
     };
     
     public Analyser() {
+        this.configured = false;
         // Hann window
         for (int n = 0; n < FFT_SIZE; n++) {
             window[n] = 0.5f * (1f - (float) Math.cos(2.0 * Math.PI * n / (FFT_SIZE - 1)));
@@ -81,7 +83,7 @@ public class Analyser {
         DB_MAX = config.DB_MAX;
         GAIN = config.GAIN;
         GAMMA = config.GAMMA;
-        
+        configured = true;
         buildBands();
     }
     
@@ -159,6 +161,7 @@ public class Analyser {
     }
     
     private void buildBands() {
+        if (!configured) return;
         Logger.info("Building bands ("+NUM_BANDS+")");
         bands = new float[NUM_BANDS];
         rawBins = new float[FFT_SIZE/2];
@@ -173,6 +176,7 @@ public class Analyser {
     }
     
     private void computeBinBandsLog() {
+        if (!configured) return;
         float binWidth = sampleRate / FFT_SIZE;
         
         // Find first and last usable bins based on MIN_FQ / MAX_FQ
@@ -250,6 +254,7 @@ public class Analyser {
     }
     
     public void compressRawToBands() {
+        if (!configured) return;
         if (bands == null || bandBinStart == null || bandBinEnd == null) return;
         
         int numBands = bands.length;
@@ -283,6 +288,7 @@ public class Analyser {
     }
     
     private void normalizeFullScale(float[] inBands, float[] outBands) {
+        if (!configured) return;
         if (inBands == null || outBands == null) return;
         
         for (int b = 0; b < inBands.length; b++) {
