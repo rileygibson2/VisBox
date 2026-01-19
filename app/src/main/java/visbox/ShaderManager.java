@@ -123,10 +123,7 @@ public class ShaderManager {
 
     public void bindTexture(int tex) {glBindTexture(GL_TEXTURE_2D, tex);}
 
-    public void assertViewport() {
-        GLFWUI ui = VBMain.getUI();
-        glViewport(0, 0, ui.getWidth(), ui.getHeight());
-    }
+    public void assertViewport() {glViewport(0, 0, GLFWUI.WIDTH, GLFWUI.HEIGHT);}
     
     public int createProgram(String vertPath, String fragPath) {
         String vertSrc = loadResource("/shaders/"+vertPath);
@@ -166,8 +163,7 @@ public class ShaderManager {
     public void setOrthoProjection() {
         if (currentProgram==-1) throw new RuntimeException("Cannot set ortho - no current program");
 
-        GLFWUI ui = VBMain.getUI();
-        float[] proj = makeOrtho(0f, ui.getWidth(), 0f, ui.getHeight(), -1f, 1f);
+        float[] proj = makeOrtho(0f, GLFWUI.WIDTH, 0f, GLFWUI.HEIGHT, -1f, 1f);
         FloatBuffer fb = BufferUtils.createFloatBuffer(16);
         fb.put(proj).flip();
 
@@ -217,5 +213,15 @@ public class ShaderManager {
         m[15] = 1f;
 
         return m;
+    }
+
+    public float[] getGenericQuad() {
+        float[] quad = {
+            -0.5f, -0.5f,
+            0.5f, -0.5f,
+            -0.5f,  0.5f,
+            0.5f,  0.5f
+        };
+        return quad;
     }
 }

@@ -33,7 +33,7 @@ public class AudioManager {
     private InputMode inputMode;
     
     public AudioManager(Analyser analyser) {
-        this.resourcePath = "/audio/vondutch.wav";
+        this.resourcePath = "/audio/daybreak.wav";
         this.analyser = analyser;
         this.playbackRunning = false;
         this.inputMode = InputMode.FILE;

@@ -1,4 +1,4 @@
-package visbox.visualiser.histograms;
+package visbox.visualiser.spectrograms;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -45,7 +45,7 @@ import visbox.Analyser.AnalyserConfig;
 import visbox.logger.Logger;
 import visbox.ui.GLFWUI;
 
-public class ClassicHistogram extends HistogramVisualiser {
+public class ClassicSpectrogram extends SpectrogramVisualiser {
     
     private float[] smoothBands;
     private boolean smoothInit;
@@ -56,8 +56,8 @@ public class ClassicHistogram extends HistogramVisualiser {
     private FloatBuffer rowBuffer;
     private int writeRow;
     
-    public ClassicHistogram() {
-        super("Histogram", 50, 800);
+    public ClassicSpectrogram() {
+        super("Spectrogram", 35, 800);
         this.smoothBands = new float[numBands];
         this.smoothInit = false;
         this.rowBuffer = BufferUtils.createFloatBuffer(numBands);

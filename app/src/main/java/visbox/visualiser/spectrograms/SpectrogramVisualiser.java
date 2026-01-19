@@ -1,11 +1,11 @@
-package visbox.visualiser.histograms;
+package visbox.visualiser.spectrograms;
 
 import visbox.Analyser;
 import visbox.ColorManager;
 import visbox.logger.Logger;
 import visbox.visualiser.Visualiser;
 
-public abstract class HistogramVisualiser extends Visualiser {
+public abstract class SpectrogramVisualiser extends Visualiser {
     
     public enum HistogramVisualiserType {
     }
@@ -16,7 +16,7 @@ public abstract class HistogramVisualiser extends Visualiser {
     protected float[][] blurredHistory;
     private int head;
     
-    public HistogramVisualiser(String displayName, int numBands, int historyLength) {
+    public SpectrogramVisualiser(String displayName, int numBands, int historyLength) {
         super(displayName, numBands);
         this.bandsReal = new float[numBands];
         this.historyLength = historyLength;

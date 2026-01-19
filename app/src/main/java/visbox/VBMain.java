@@ -3,20 +3,18 @@ package visbox;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import javax.swing.JFrame;
 import javax.swing.Timer;
 
 import visbox.logger.Logger;
 import visbox.ui.GLFWUI;
-import visbox.ui.UI;
 import visbox.visualiser.Visualiser;
 import visbox.visualiser.bars.ClassicBars;
 import visbox.visualiser.bars.ClipBounce;
 import visbox.visualiser.bars.RoundedBars;
-import visbox.visualiser.histograms.ClassicHistogram;
 import visbox.visualiser.lines.Mouth;
 import visbox.visualiser.particles.ParticleBars;
 import visbox.visualiser.particles.ParticleField;
+import visbox.visualiser.spectrograms.ClassicSpectrogram;
 
 public class VBMain {
     
@@ -101,12 +99,12 @@ public class VBMain {
         addVisualiser(new ClassicBars());
         addVisualiser(new ClipBounce());
         addVisualiser(new RoundedBars());
-        addVisualiser(new ClassicHistogram());
+        addVisualiser(new ClassicSpectrogram());
         addVisualiser(new Mouth());
         addVisualiser(new ParticleBars());
         addVisualiser(new ParticleField());
         
-        setCurrentVisualiser("Histogram");
+        setCurrentVisualiser("ClassicBars");
     }
     
     private void addVisualiser(Visualiser v) {

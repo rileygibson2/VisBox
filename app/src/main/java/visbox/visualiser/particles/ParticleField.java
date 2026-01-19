@@ -149,14 +149,13 @@ public class ParticleField extends ParticleVisualiser {
         sM.bindVAO(0);
         
         // Setup glow FBO
-        GLFWUI ui = VBMain.getUI();
         glowFBO = glGenFramebuffers();
         sM.bindFBO(glowFBO);
         
         glowTex = glGenTextures();
         sM.bindTexture(glowTex);
         
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, ui.getWidth(), ui.getHeight(), 0, GL_RGBA, GL_FLOAT, 0L);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, GLFWUI.WIDTH, GLFWUI.HEIGHT, 0, GL_RGBA, GL_FLOAT, 0L);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -186,7 +185,6 @@ public class ParticleField extends ParticleVisualiser {
     @Override
     public void update() {
         super.update();
-        GLFWUI ui = VBMain.getUI();
         
         // Spawn particles
         if (newFFTData()) {
@@ -201,8 +199,8 @@ public class ParticleField extends ParticleVisualiser {
                     Particle p = new Particle();
                     
                     p.band = b;
-                    p.x = rand(0, ui.getWidth());
-                    p.y = rand(0, ui.getHeight());
+                    p.x = rand(0, GLFWUI.WIDTH);
+                    p.y = rand(0, GLFWUI.HEIGHT);
                     
                     float bT = (float) b/(numBands-1);
                     float speed = 1f+12f*v; // Middle div by bT if want
@@ -242,13 +240,13 @@ public class ParticleField extends ParticleVisualiser {
                 float v = bands[p.band];
                 if (v>=bandLast[p.band]) {
                     p.size += rand((0f*v), (10f*v));
-                    //p.vx = p.vx*(1f+v);
-                    //p.vy = p.vy*(1f+v);
+                    p.vx += p.vx*(0.2f+v);
+                    p.vy += p.vy*(0.2f+v);
                 }
                 else {
                     p.size -= rand((0f*v), (4f*v));
-                    //p.vx = p.vx*(1f-v);
-                    //p.vy = p.vy*(1f-v);
+                    p.vx -= p.vx*(0.2f+v);
+                    p.vy -= p.vy*(0.2f+v);
                 }
             }
             

@@ -50,8 +50,8 @@ public class GLFWUI {
     
     private boolean initialised;
     private long window;
-    private int width = 1280;
-    private int height = 720;
+    public static int WIDTH = 1280;
+    public static int HEIGHT = 720;
     
     private float time = 0f;
     
@@ -66,10 +66,6 @@ public class GLFWUI {
         this.fpsTimer = 0.0;
         this.frames = 0;
     }
-
-    public int getWidth() {return width;}
-
-    public int getHeight() {return height;}
     
     public void init() {
         // print GLFW errors to stderr
@@ -88,7 +84,7 @@ public class GLFWUI {
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         
         // Create window
-        window = glfwCreateWindow(width, height, "VisBox", NULL, NULL);
+        window = glfwCreateWindow(WIDTH, HEIGHT, "VisBox", NULL, NULL);
         if (window == NULL) {
             throw new RuntimeException("Failed to create GLFW window");
         }
@@ -103,7 +99,7 @@ public class GLFWUI {
         // Center the window on the main monitor
         long monitor = glfwGetPrimaryMonitor();
         var vid = glfwGetVideoMode(monitor);
-        glfwSetWindowPos(window, (vid.width() - width) / 2, (vid.height() - height) / 2);
+        glfwSetWindowPos(window, (vid.width() - WIDTH) / 2, (vid.height() - HEIGHT) / 2);
         
         // Make context current
         glfwMakeContextCurrent(window);
@@ -118,12 +114,12 @@ public class GLFWUI {
         GL.createCapabilities();
         
         // Setup initial viewport
-        glViewport(0, 0, width, height);
+        glViewport(0, 0, WIDTH, HEIGHT);
         
         // Handle resize
         glfwSetFramebufferSizeCallback(window, (win, w, h) -> {
-            width = w;
-            height = h;
+            WIDTH = w;
+            HEIGHT = h;
             glViewport(0, 0, w, h);
             Visualiser v = VBMain.getInstance().getCurrentVisualiser();
             if (v!=null) v.resize(w, h);
