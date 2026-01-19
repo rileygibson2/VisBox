@@ -32,12 +32,13 @@ import visbox.ui.GLFWUI;
 
 public class ShaderManager {
     
-    int currentProgram;
-    int screenTexProgram;
-    int screenFadeProgram;
-    int screenVAO;
-    int uScreenTex;
-    int uScreenFade;
+    private int currentProgram;
+    private int screenTexProgram;
+    private int screenFadeProgram;
+
+    public int SCREEN_VAO;
+    private int uScreenTex;
+    private int uScreenFade;
 
 
     public ShaderManager() {
@@ -47,8 +48,8 @@ public class ShaderManager {
     }
 
     private void createScreenTexProgram() {
-        screenTexProgram = createProgram("screenTex.vert", "screenTex.frag");
-        screenVAO = glGenVertexArrays();
+        screenTexProgram = createProgram("screen/screenTex.vert", "screen/screenTex.frag");
+        SCREEN_VAO = glGenVertexArrays();
 
         useProgram(screenTexProgram);
         uScreenTex = glGetUniformLocation(screenTexProgram, "uScreenTex");
@@ -57,7 +58,7 @@ public class ShaderManager {
     }
 
     private void createScreenFadeProgram() {
-        screenFadeProgram = createProgram("screenFade.vert", "screenFade.frag");
+        screenFadeProgram = createProgram("screen/screenFade.vert", "screen/screenFade.frag");
 
         useProgram(screenFadeProgram);
         uScreenFade = glGetUniformLocation(screenFadeProgram, "uScreenFade");
@@ -83,7 +84,7 @@ public class ShaderManager {
         useProgram(screenTexProgram);
         glActiveTexture(GL_TEXTURE0);
         bindTexture(tex);
-        bindVAO(screenVAO);
+        bindVAO(SCREEN_VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
         
         bindTexture(0);
@@ -94,7 +95,7 @@ public class ShaderManager {
     public void drawFade(float fade) {
         useProgram(screenFadeProgram);
         glUniform1f(uScreenFade, fade);
-        bindVAO(screenVAO);
+        bindVAO(SCREEN_VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
         bindVAO(0);
         useProgram(0);

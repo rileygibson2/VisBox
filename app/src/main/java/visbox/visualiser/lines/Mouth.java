@@ -19,7 +19,6 @@ public class Mouth extends LineVisualiser {
     
     private final List<HistSample> history = new ArrayList<HistSample>();
     private float bgAmp = 0f; // For background
-    private long lastAmpTick;
     
     private float GAIN = 1.2f;
     private float GAMMA = 1.1f;
@@ -47,24 +46,17 @@ public class Mouth extends LineVisualiser {
     @Override
     public void activate(AnalyserConfig a) {
         super.activate(a);
-        VBMain.getInstance().getColorManager().setHue(0f, -0.2f); // 0 0.8
+        VBMain.getColorManager().setHue(0f, -0.2f); // 0 0.8
     }
     
     @Override
     public void update() {
         super.update();
+        float level = 0f;
         
-        float level;
-        boolean update = false;
-        Analyser analyser = VBMain.getInstance().getAnalyser();
-        synchronized (analyser) {
-            long tick = analyser.getAmpTick();
-            if (tick!=lastAmpTick) update = true;
-            level = analyser.getCurrentLevel();
-            lastAmpTick = tick;
-        }
-        
-        if (update) {
+        if (newAmpData()) {
+            level = VBMain.getAnalyser().getCurrentLevel();
+
             // Shape and clamp
             level = (float) Math.pow(level*GAIN, GAMMA);
             level = Math.max(0, Math.min(1f, level));
@@ -103,7 +95,7 @@ public class Mouth extends LineVisualiser {
             }
             
             // Add new
-            if (update) history.add(0, new HistSample(level, 0));
+            if (newAmpData()) history.add(0, new HistSample(level, 0));
 
         }
     }

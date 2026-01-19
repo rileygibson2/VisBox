@@ -16,8 +16,11 @@ public class Logger {
     public static final String WHITE  = "\u001B[37m";
     
     private static final StackWalker WALKER = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
+    private static boolean verbose = false;
     
-    public Logger() {}
+    public static void setVerbose(boolean v) {verbose = v;}
+
+    public static boolean verbose() {return verbose;}
     
     public static void info(String m) {
         Class<?> caller = getCaller();

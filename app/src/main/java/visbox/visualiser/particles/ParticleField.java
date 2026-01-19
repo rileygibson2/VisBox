@@ -67,11 +67,8 @@ import visbox.ui.GLFWUI;
 
 public class ParticleField extends ParticleVisualiser {
     
-    
-    private BufferedImage glowBuffer;
     private ArrayList<Particle> particles;
     private int MAX_PARTICLES = 10000;
-    private long lastFFTTick;
     
     private int program;
     private String vertSrc = "particle1.vert";
@@ -175,11 +172,12 @@ public class ParticleField extends ParticleVisualiser {
         super.activate(a);
     }
     
-    public void resize() {
-        GLFWUI ui = VBMain.getUI();
+    @Override
+    public void resize(int w, int h) {
+        super.resize(w, h);
         ShaderManager sM = VBMain.getShaderManager();
         sM.bindTexture(glowTex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, ui.getWidth(), ui.getHeight(), 0, GL_RGBA, GL_FLOAT, 0L);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, 0L);
         sM.bindTexture(0);
         
         sM.setOrthoProjection();
@@ -190,17 +188,8 @@ public class ParticleField extends ParticleVisualiser {
         super.update();
         GLFWUI ui = VBMain.getUI();
         
-        // Check if new fft data
-        Analyser analyser = VBMain.getInstance().getAnalyser();
-        boolean newFFT = false;
-        synchronized (analyser) {
-            long tick = analyser.getFFTTick();
-            if (tick!=lastFFTTick) newFFT = true;
-            lastFFTTick = tick;
-        }
-        
         // Spawn particles
-        if (newFFT) {
+        if (newFFTData()) {
             for (int b=0; b<bands.length-1; b++) {
                 float v = bands[b];
                 if (v<0.01f) continue;
@@ -249,7 +238,7 @@ public class ParticleField extends ParticleVisualiser {
             
             p.life -= 0.003;
             
-            if (newFFT) {
+            if (newFFTData()) {
                 float v = bands[p.band];
                 if (v>=bandLast[p.band]) {
                     p.size += rand((0f*v), (10f*v));

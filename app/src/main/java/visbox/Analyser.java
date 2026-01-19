@@ -154,7 +154,7 @@ public class Analyser {
         int n = Math.min(out.length, fftMagnitudes.length);
         System.arraycopy(fftMagnitudes, 0, out, 0, n);
     }
-
+    
     public void updateSampleRate(float sampleRate) {
         this.sampleRate = sampleRate;
         buildBands();
@@ -235,14 +235,16 @@ public class Analyser {
             prevEnd = end;
         }
         
-        // Optional: log the mapping for debugging
-        Logger.info("Band bin ranges: ");
-        for (int b = 0; b < NUM_BANDS; b++) {
-            int s = bandBinStart[b];
-            int e = bandBinEnd[b];
-            float f0 = s * binWidth;
-            float f1 = (e - 1) * binWidth;
-            Logger.info("["+b+"]("+(e-s)+") "+s+"-"+(e-1)+" ("+(int) f0+"-"+(int) f1+" Hz)  ");
+        // Log the mappings
+        if (Logger.verbose()) {
+            Logger.info("Band bin ranges: ");
+            for (int b = 0; b < NUM_BANDS; b++) {
+                int s = bandBinStart[b];
+                int e = bandBinEnd[b];
+                float f0 = s * binWidth;
+                float f1 = (e - 1) * binWidth;
+                Logger.info("["+b+"]("+(e-s)+") "+s+"-"+(e-1)+" ("+(int) f0+"-"+(int) f1+" Hz)  ");
+            }
         }
     }
     
@@ -314,7 +316,7 @@ public class Analyser {
             // Shaping
             norm = norm*GAIN;
             norm = (float) Math.pow(norm, GAMMA);
-
+            
             // Eq - compress low end and increase high end
             float t = (float) b/(inBands.length-1); // Band pos 0..1
             float tilt = 0.6f+(1.2f)*t;

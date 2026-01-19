@@ -106,7 +106,7 @@ public class VBMain {
         addVisualiser(new ParticleBars());
         addVisualiser(new ParticleField());
         
-        setCurrentVisualiser("ParticleField");
+        setCurrentVisualiser("Histogram");
     }
     
     private void addVisualiser(Visualiser v) {
