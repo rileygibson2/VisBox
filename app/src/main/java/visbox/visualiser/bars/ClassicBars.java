@@ -54,12 +54,14 @@ public class ClassicBars extends BarVisualiser {
     public ClassicBars() {
         super("ClassicBars", 24);
         this.hue = 0.8f;
+        Logger.setVerbose(true);
     }
     
     @Override
     public void activate(AnalyserConfig a) {
+        super.activate(a);
+
         ShaderManager sM = VBMain.getShaderManager();
-        
         program = sM.createProgram("classicbars.vert", "classicbars.frag");
         sM.setCurrentProgram(program);
         sM.useProgram(program);
@@ -96,16 +98,18 @@ public class ClassicBars extends BarVisualiser {
         glEnableVertexAttribArray(3);
         glVertexAttribPointer(3, 3, GL_FLOAT, false, stride, 2L*Float.BYTES);
         glVertexAttribDivisor(3, 1);
+
+        sM.setUniformInt("uNumBands", numBands);
+        sM.setUniformInt("uNumBlocks", numBlocks);
+        sM.setUniformFloat("uCornerRadius", 0.1f);
+        sM.setUniformFloat("uEdgeSoftness", 0.02f);
         
-        //sM.setOrthoProjection();
         sM.bindVAO(0);
         sM.bindFBO(0);
         sM.bindVBO(0);
         sM.useProgram(0);
         
         instanceBuffer = BufferUtils.createFloatBuffer(MAX_INSTANCES*5);
-        
-        super.activate(a);
     }
     
     @Override
@@ -114,7 +118,7 @@ public class ClassicBars extends BarVisualiser {
         
         // Decay
         for (int i = 0; i < numBands; i++) {
-            bandReal[i] = bandReal[i]-0.003f;
+            bandReal[i] = bandReal[i]-0.01f;
             float v = bandReal[i];
             if (bands[i]>v) {
                 v = bands[i];
@@ -127,45 +131,7 @@ public class ClassicBars extends BarVisualiser {
     
     @Override
     public void render(Graphics2D g, int w, int h) {
-        float hSpacing = (float) w/numBands;
-        float vSpacing = (float) h/numBlocks;
-        float blockV = (float) 1/numBlocks;
         
-        hue = hue-0.005f;
-        if (hue<0f) hue = 1f-hue;
-        
-        for (int i=0; i<numBands; i++) {
-            float v = bandReal[i];
-            
-            int block = (int) Math.ceil(v/blockV);
-            block = Math.max(0, Math.min(block, numBlocks));
-            
-            float aI = 0;
-            if (block>0) aI = v/block;
-            
-            float x = 2+(i*hSpacing);
-            
-            float hB = hue+((i-(numBands/2))*0.01f);
-            if (i<numBands/2) hB = hue-((i-(numBands/2))*0.01f);
-            
-            if (hB<0) hB = 1f-hB;
-            else if (hB>1) hB = 1f-hB;
-            
-            for (int z=0; z<block; z++) {
-                int y = (int) (h-((z+1)*vSpacing+2));
-                float aB = aI*(block-z);
-                
-                // Gamma shape alpha
-                aB = (float) (Math.pow(aB/v, 0.4)*v);
-                aB = Math.max(0.2f, Math.min(aB, 1f));
-                Color c = Color.getHSBColor(hB, 1f-aB*0.8f, aB);
-                g.setColor(c);
-                
-                g.fillRoundRect((int) x, y, (int) (hSpacing-4), (int) (vSpacing-4), 4, 4);
-                //g.fillRect((int) x, y, (int) (hSpacing-4), (int) (vSpacing-4));
-                
-            }
-        }
     }
     
     @Override
@@ -176,9 +142,6 @@ public class ClassicBars extends BarVisualiser {
         sM.bindFBO(0);
         sM.setBlend(true);
         sM.clearToBlack();
-        
-        sM.setUniformInt("uNumBands", numBands);
-        sM.setUniformInt("uNumBlocks", numBlocks);
         
         sM.bindVAO(vAO);
         glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, numBlocks*numBands);
@@ -192,13 +155,14 @@ public class ClassicBars extends BarVisualiser {
         instanceBuffer.clear();
         float blockV = (float) 1/numBlocks;
         
-        //hue = hue-0.005f;
-        //if (hue<0f) hue = 1f-hue;
+        hue = hue-0.001f;
+        if (hue<0f) hue = 1f-hue;
         
         for (int i=0; i<numBands; i++) {
             float v = bandReal[i];
+            //v = (1f/numBands)*i;
             
-            int block = (int) Math.ceil(v/blockV);
+            int block = (int) Math.ceil(v/blockV); // Block i
             block = Math.max(0, Math.min(block, numBlocks));
             
             float aI = 0;
@@ -215,11 +179,10 @@ public class ClassicBars extends BarVisualiser {
                     sB = 0;
                 } else {
                     bB = aI*(block-z);
-                    bB = (float) (Math.pow(bB/v, 0.4)*v);
-                    bB = Math.max(0.2f, Math.min(bB, 1f));
+                    bB = (float) (Math.pow(bB/v, 0.8)*v); // Shape
+                    bB = Math.max(0f, Math.min(bB, 1f)); // Clamp
+                    sB = 1f-bB*0.2f;
                 }
-                
-                sB = 1f-bB*0.8f;
                 
                 instanceBuffer.put((float) i); // Band
                 instanceBuffer.put((float) z); // Block

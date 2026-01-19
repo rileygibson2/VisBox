@@ -166,7 +166,7 @@ public class Analyser {
         bands = new float[NUM_BANDS];
         rawBins = new float[FFT_SIZE/2];
         bandBinCounts = new int[NUM_BANDS]; 
-        sampleRate = VBMain.getInstance().getAudioManager().getSampleRate();
+        sampleRate = VBMain.getAudioManager().getSampleRate();
         
         if (sampleRate<=0f) {
             Logger.error("Sample rate not set in buildBands");
@@ -322,7 +322,7 @@ public class Analyser {
             float tilt = 0.6f+(1.2f)*t;
             norm = norm*tilt;
             
-            outBands[b] = Math.max(0f, Math.min(norm, 1f));
+            outBands[b] = Math.max(0f, Math.min(norm, 1f)); // Clamp
         }
     }
     
