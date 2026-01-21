@@ -12,6 +12,7 @@ import visbox.visualiser.bars.ClassicBars;
 import visbox.visualiser.bars.ClipBounce;
 import visbox.visualiser.bars.RoundedBars;
 import visbox.visualiser.lines.Mouth;
+import visbox.visualiser.particles.FluidDynamics;
 import visbox.visualiser.particles.ParticleBars;
 import visbox.visualiser.particles.ParticleField;
 import visbox.visualiser.spectrograms.ClassicSpectrogram;
@@ -103,8 +104,9 @@ public class VBMain {
         addVisualiser(new Mouth());
         addVisualiser(new ParticleBars());
         addVisualiser(new ParticleField());
+        addVisualiser(new FluidDynamics());
         
-        setCurrentVisualiser("ClassicBars");
+        setCurrentVisualiser("FluidDynamics");
     }
     
     private void addVisualiser(Visualiser v) {
