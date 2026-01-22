@@ -42,6 +42,15 @@ public class Logger {
     public static void debugAtInterval(long i, String m) {
         if (VBMain.getGlobalTick()%i==0) debug(getCaller().getSimpleName(), m);
     }
+
+    public static void debugArray(float[] a) {
+        String s = "[";
+        for (int i=0; i<a.length; i++) {
+            s += a[i];
+            if (i<a.length-1) s +=", ";
+        }
+        debug(getCaller().getSimpleName(), s+"]");
+    }
     
     public static void error(String m) {
         System.err.println(LogColorEnum.RED.ansi+"[ERROR] ["+getCaller().getSimpleName()+"]: "+m+LogColorEnum.RESET.ansi);
@@ -60,7 +69,6 @@ public class Logger {
         }
         return null;
     }
-    
     
     private static Class<?> getCaller() {
         return WALKER.walk(frames -> frames.skip(2).findFirst().get().getDeclaringClass());
