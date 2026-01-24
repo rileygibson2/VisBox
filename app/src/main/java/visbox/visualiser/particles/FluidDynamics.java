@@ -16,10 +16,7 @@ import static org.lwjgl.opengl.GL33.glVertexAttribDivisor;
 
 import java.awt.Graphics2D;
 import java.nio.FloatBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
 
 import org.lwjgl.BufferUtils;
 
@@ -34,21 +31,27 @@ public class FluidDynamics extends ParticleVisualiser {
     private int program;
     private int vAO;
     private int instanceVBO;
+    FloatBuffer instanceBuffer;
     
-    private int numParticles = 800;
-    private float pSize = 10.0f;
+    private int numParticles = 2000;
+    private float pSize = 5.0f;
     private float mass = 1.0f;
-    private float restDensity = 90000.0f;
-    private float stiffness = 1.0f;
-    private float viscosity = 0.1f;
-    private float smoothingRadius = 300f;
-    private float gravity = 0f; //-9.81
+    private float restDensity = 20f;
+    private float pressureMultiplier = 15000f;
+    private float nearPressureMultiplier = 30000f;
+    private float viscosityStrength = 0.5f;
+    private float smoothingRadius = 30f;
+    private float collisionDamping = 0.8f;
+    private float gravity = -150f;
+    private int iterationsPerFrame = 3;
+
     
     public float[] pX, pY;
     public float[] vX, vY;
     public float[] aX, aY;
-    public float[] density;
-    public float[] pressure;
+    public float[] pPredX, pPredY;
+    public float[] density, nearDensity;
+    public float[] pressure, nearPressure;
     
     public int worldW;
     public int worldH;
@@ -58,6 +61,14 @@ public class FluidDynamics extends ParticleVisualiser {
     public SpatialMap[] spatialLookup;
     public int[] spatialLookupIndices;
     
+    private float poly6C;
+    private float spikyPow3C;
+    private float spikyPow2C;
+    private float spikyPow3DerivC;
+    private float spikyPow2DerivC;
+
+    private boolean debug = true;
+    
     public FluidDynamics() {
         super("FluidDynamics", 10);
         pX = new float[numParticles];
@@ -66,11 +77,128 @@ public class FluidDynamics extends ParticleVisualiser {
         vY = new float[numParticles];
         aX = new float[numParticles];
         aY = new float[numParticles];
+        pPredX = new float[numParticles];
+        pPredY = new float[numParticles];
         density = new float[numParticles];
+        nearDensity = new float[numParticles];
         pressure = new float[numParticles];
+        nearPressure = new float[numParticles];
         
         spatialLookup = new SpatialMap[numParticles];
         spatialLookupIndices = new int[numParticles];
+        
+        recomputeKernelConstants();
+    }
+    
+    private void debug() {
+        float min = Float.POSITIVE_INFINITY;
+        float max = Float.NEGATIVE_INFINITY;
+        float avg = 0.0f;
+        for (int i=0; i<numParticles; i++) {
+            if (density[i]<min) min = density[i];
+            if (density[i]>max) max = density[i];
+            avg += density[i];
+        }
+        avg /= numParticles;
+        
+        Logger.debug("Min density: "+min);
+        Logger.debug("Max density: "+max);
+        Logger.debug("Avg density: "+avg);
+        
+        min = Float.POSITIVE_INFINITY;
+        max = Float.NEGATIVE_INFINITY;
+        avg = 0.0f;
+        for (int i=0; i<numParticles; i++) {
+            if (pressure[i]<min) min = pressure[i];
+            if (pressure[i]>max) max = pressure[i];
+            avg += pressure[i];
+        }
+        avg /= numParticles;
+        
+        Logger.debug("Min pressure: "+min);
+        Logger.debug("Max pressure: "+max);
+        Logger.debug("Avg pressure: "+avg);
+        
+        /*min = Float.POSITIVE_INFINITY;
+        max = Float.NEGATIVE_INFINITY;
+        avg = 0.0f;
+        for (int i=0; i<numParticles; i++) {
+            if (aX[i]<min) min = aX[i];
+            if (aX[i]>max) max = aX[i];
+            avg += aX[i];
+        }
+        avg /= numParticles;
+        
+        Logger.debug("Min aX: "+min);
+        Logger.debug("Max aX: "+max);
+        Logger.debug("Avg aX: "+avg);*/
+        
+        Logger.ln();
+    }
+    
+    private void recomputeKernelConstants() {
+        float h  = smoothingRadius;
+        float pi = (float) Math.PI;
+        
+        poly6C          = (float) (315.0 / (64.0 * pi * Math.pow(h, 9)));
+        spikyPow3C      = (float) (15.0  / (pi * Math.pow(h, 6)));
+        spikyPow3DerivC = (float) (45.0  / (pi * Math.pow(h, 6)));
+        spikyPow2C      = (float) (15.0  / (2.0 * pi * Math.pow(h, 5)));
+        spikyPow2DerivC = (float) (15.0  / (pi * Math.pow(h, 5)));
+    }
+    
+    private float smoothingKernelPoly6(float dst) {
+        if (dst >= smoothingRadius) return 0.0f;
+        float v = smoothingRadius * smoothingRadius - dst * dst;
+        return v * v * v * poly6C;
+    }
+    
+    private float spikyKernelPow3(float dst) {
+        if (dst >= smoothingRadius) return 0.0f;
+        float v = smoothingRadius - dst;
+        return v * v * v * spikyPow3C;
+    }
+    
+    private float spikyKernelPow2(float dst) {
+        if (dst >= smoothingRadius) return 0.0f;
+        float v = smoothingRadius - dst;
+        return v * v * spikyPow2C;
+    }
+    
+    private float derivativeSpikyPow3(float dst) {
+        if (dst > smoothingRadius) return 0.0f;
+        float v = smoothingRadius - dst;
+        return -v * v * spikyPow3DerivC; // scalar dW/dr
+    }
+    
+    private float derivativeSpikyPow2(float dst) {
+        if (dst > smoothingRadius) return 0.0f;
+        float v = smoothingRadius - dst;
+        return -v * spikyPow2DerivC; // scalar dW/dr
+    }
+    
+    // Main density kernel
+    private float densityKernel(float dst) {
+        return spikyKernelPow2(dst);       // (h - r)^2 * SpikyPow2ScalingFactor
+    }
+    
+    // Short-range / near-density kernel
+    private float nearDensityKernel(float dst) {
+        return spikyKernelPow3(dst);       // (h - r)^3 * SpikyPow3ScalingFactor
+    }
+    
+    // Derivatives for pressure forces
+    private float densityDerivative(float dst) {
+        return derivativeSpikyPow2(dst);   // scalar dW/dr
+    }
+    
+    private float nearDensityDerivative(float dst) {
+        return derivativeSpikyPow3(dst);   // scalar dW/dr
+    }
+    
+    // Viscosity kernel
+    private float viscosityKernel(float dst) {
+        return smoothingKernelPoly6(dst);  // Poly6-based smoothing
     }
     
     @Override
@@ -78,8 +206,9 @@ public class FluidDynamics extends ParticleVisualiser {
         super.activate(a);
         ShaderManager sM = VBMain.getShaderManager();
         
-        program = sM.createProgram("fluiddyn.vert", "fluiddyn.frag");
+        program = sM.createProgram("fluiddyn/fluiddyn.vert", "fluiddyn/fluiddyn.frag");
         sM.setCurrentProgram(program);
+        sM.useProgram(program);
         
         // Create VAO
         vAO = glGenVertexArrays();
@@ -97,9 +226,9 @@ public class FluidDynamics extends ParticleVisualiser {
         // Create instance data VBO
         instanceVBO = glGenBuffers();
         sM.bindVBO(instanceVBO);
-        glBufferData(GL_ARRAY_BUFFER, (long) numParticles*3*Float.BYTES, GL_STREAM_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, (long) numParticles*4*Float.BYTES, GL_STREAM_DRAW);
         
-        int stride = 3*Float.BYTES;
+        int stride = 4*Float.BYTES;
         // Add center to VAO
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 2, GL_FLOAT, false, stride, 0L);
@@ -110,14 +239,31 @@ public class FluidDynamics extends ParticleVisualiser {
         glVertexAttribPointer(2, 1, GL_FLOAT, false, stride, 2L * Float.BYTES);
         glVertexAttribDivisor(2, 1);
         
+        // Add property to VAO
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 1, GL_FLOAT, false, stride, 3L * Float.BYTES);
+        glVertexAttribDivisor(3, 1);
+        
+        sM.setUniformFloat("uLow", 0f);
+        sM.setUniformFloat("uHigh", (float) 50f*50f);
+
         sM.setOrthoProjection();
+        sM.useProgram(0);
+
+        instanceBuffer = BufferUtils.createFloatBuffer(numParticles*4);
         
         setup();
     }
     
     @Override
     public void update() {
-        stepSimulation();
+        //float frameDT = VBMain.getDeltaTime(); // or fixed
+        float frameDT = 1.0f/60.0f;
+        float dT = frameDT / iterationsPerFrame;
+        
+        for (int i = 0; i < iterationsPerFrame; i++) {
+            stepSimulation(dT);
+        }
     }
     
     @Override
@@ -140,27 +286,28 @@ public class FluidDynamics extends ParticleVisualiser {
     public void render(Graphics2D g, int w, int h) {}
     
     private void uploadInstanceData() {
-        FloatBuffer buffer = BufferUtils.createFloatBuffer(numParticles*3);
+        instanceBuffer.clear();
         
         for (int i=0; i<numParticles; i++) {
-            buffer.put(pX[i]);
-            buffer.put(pY[i]);
-            buffer.put(pSize);
+            instanceBuffer.put(pX[i]);
+            instanceBuffer.put(pY[i]);
+            instanceBuffer.put(pSize);
+            instanceBuffer.put((vX[i]*vX[i]+vY[i]*vY[i])); // speed squared as property
         }
-        buffer.flip();
+        instanceBuffer.flip();
         
         VBMain.getShaderManager().bindVBO(instanceVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, buffer);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, instanceBuffer);
         VBMain.getShaderManager().bindVBO(0);
     }
     
     private void setup() {
         // Setup particles
-        int adj = 300;
-        int minX = adj;
-        int minY = adj;
-        int maxX = GLFWUI.WIDTH-adj;
-        int maxY = GLFWUI.HEIGHT-adj;
+        float adj = 0.4f;
+        int minX = (int) (GLFWUI.WIDTH*adj);
+        int minY = (int) (GLFWUI.HEIGHT*adj);
+        int maxX = (int) (GLFWUI.WIDTH*(1-adj));
+        int maxY = (int) (GLFWUI.HEIGHT*(1-adj));
         int w = maxX-minX;
         int h = maxY-minY;
         float aspect = w/h;
@@ -195,16 +342,16 @@ public class FluidDynamics extends ParticleVisualiser {
     
     private void buildSpatialLookup() {
         for (int i=0; i<numParticles; i++) {
-            int gX = (int) (pX[i]/cellSize);
-            int gY = (int) (pY[i]/cellSize);
+            int gX = (int) (pPredX[i]/cellSize);
+            int gY = (int) (pPredY[i]/cellSize);
             spatialLookup[i] = new SpatialMap(i, hashCell(gX, gY));            
         }
-        Arrays.sort(spatialLookup, (a, b) -> Integer.compare(a.h, b.h));
+        Arrays.sort(spatialLookup, (a, b) -> Integer.compare(a.hash, b.hash));
         
         int last = Integer.MIN_VALUE;
         
         for (int i=0; i<spatialLookup.length; i++) {
-            int h = spatialLookup[i].h;
+            int h = spatialLookup[i].hash;
             
             if (h>last) {
                 spatialLookupIndices[h] = i;
@@ -218,139 +365,166 @@ public class FluidDynamics extends ParticleVisualiser {
         return (h&0x7fffffff)%numParticles;
     }
     
-    private List<Integer> getParticlesInCell(int cX, int cY) {
-        int h = hashCell(cX, cY);
-        int i = spatialLookupIndices[h];
-        List<Integer> particles = new ArrayList<>();
-        if (i==Integer.MAX_VALUE) return particles;
-        
-        int z = spatialLookup[i].h;
-        while (z==h&&i<spatialLookup.length) {
-            particles.add(spatialLookup[i].pI);
-            z = spatialLookup[i].h;
-            i++;
-        }
-        
-        return particles;
-    }
-    
     class SpatialMap {
         int pI;
-        int h;
-        SpatialMap(int pI, int h) {this.pI = pI; this.h = h;}
+        int hash;
+        SpatialMap(int pI, int hash) {this.pI = pI; this.hash = hash;}
     }
     
     private void computeDensityAndPressure() {
         float smoothingR2 = smoothingRadius*smoothingRadius;
         
         for (int p=0; p<numParticles; p++) {
-            float xI = pX[p];
-            float yI = pY[p];
+            float xI = pPredX[p];
+            float yI = pPredY[p];
             
             float rho = 0.0f;
+            float rhoNear = 0.0f;
             
-            int gX = (int) (xI/cellSize);
-            int gY = (int) (yI/cellSize);
+            int cX = (int) (xI/cellSize);
+            int cY = (int) (yI/cellSize);
             
-            for (int dY=-1; dY<=1; dY++) {
-                for (int dX=-1; dX<=1; dX++) {
-                    int nGX = gX+dX;
-                    int nGY = gY+dY;
+            for (int gY=-1; gY<=1; gY++) {
+                for (int gX=-1; gX<=1; gX++) {
+                    int nGX = cX+gX;
+                    int nGY = cY+gY;
                     if (nGX<0||nGX>=gridW||nGY<0||nGY>=gridH) continue;
-                    List<Integer> particles = getParticlesInCell(nGX, nGY);
                     
-                    for (int i=0; i<particles.size(); i++) {
-                        int j = particles.get(i);
-                        float rX = xI-pX[j];
-                        float rY = yI-pY[j];
-                        float r2 = rX*rX+rY*rY;
-                        if (r2>=smoothingR2) continue;
+                    int hash = hashCell(nGX, nGY);
+                    int i = spatialLookupIndices[hash];
+                    if (i==Integer.MAX_VALUE) continue;
+                    
+                    while (i<spatialLookup.length&&spatialLookup[i].hash==hash) {
+                        int j = spatialLookup[i].pI;
+                        i++;
+                        float dX = pPredX[j] - xI;
+                        float dY = pPredY[j] - yI;
+                        float d2 = dX*dX + dY*dY;
+                        if (d2 > smoothingR2) continue;
                         
-                        float r = (float) Math.sqrt(r2);
-                        float w = densityKernel(r, smoothingRadius);
+                        float dst = (float) Math.sqrt(d2);
                         
-                        rho += mass*w;
+                        rho += densityKernel(dst);
+                        rhoNear += nearDensityKernel(dst);
+                        
                     }
                 }
             }
+
             density[p] = rho;
-            pressure[p] = stiffness*(density[p]-restDensity);
-            //if (pressure[p]<0.0f) pressure[p] = 0.0f;
+            nearDensity[p] = rhoNear;
+            
+            float pMain = (rho-restDensity) * pressureMultiplier;
+            float pNear = rhoNear * nearPressureMultiplier;
+            
+            //if (pMain < 0.0f) pMain = 0.0f;
+            //if (pNear < 0.0f) pNear = 0.0f;
+            
+            pressure[p] = pMain;
+            nearPressure[p] = pNear;
         }
     }
     
-    private float densityKernel(float r, float h) { //Poly6
-        if (r>=h) return 0.0f;
-        float c = (float) (315.0f/(64.0f*Math.PI*Math.pow(h, 9)));
-        float x = (h*h-r*r);
-        return c*(x*x*x);
-    }
-    
-    private void calculateForces() {
+    private void applyForces() {
         float smoothingR2 = smoothingRadius*smoothingRadius;
         
         for (int p=0; p<numParticles; p++) {
-            float xI = pX[p];
-            float yI = pY[p];
+            float xI = pPredX[p];
+            float yI = pPredY[p];
+            
             float rhoI = density[p];
             float presI = pressure[p];
+            float nearPresI = nearPressure[p];
             
             float fX = 0.0f;
             float fY = 0.0f;
             
-            int gX = (int) (xI/cellSize);
-            int gY = (int) (yI/cellSize);
+            float vIx = vX[p];
+            float vIy = vY[p];
+            float viscX = 0.0f;
+            float viscY = 0.0f;
             
-            for (int dY=-1; dY<=1; dY++) {
-                for (int dX=-1; dX<=1; dX++) {
-                    int nGX = gX+dX;
-                    int nGY = gY+dY;
+            
+            int cX = (int) (xI/cellSize);
+            int cY = (int) (yI/cellSize);
+            
+            for (int gY=-1; gY<=1; gY++) {
+                for (int gX=-1; gX<=1; gX++) {
+                    int nGX = cX+gX;
+                    int nGY = cY+gY;
                     if (nGX<0||nGX>=gridW||nGY<0||nGY>=gridH) continue;
-                    List<Integer> particles = getParticlesInCell(nGX, nGY);
                     
-                    for (int i=0; i<particles.size(); i++) {
-                        int j = particles.get(i);
+                    int hash = hashCell(nGX, nGY);
+                    int i = spatialLookupIndices[hash];
+                    if (i==Integer.MAX_VALUE) continue;
+                    
+                    while (i<spatialLookup.length&&spatialLookup[i].hash==hash) {
+                        int j = spatialLookup[i].pI;
+                        i++;
                         if (j==p) continue;
                         
-                        float rX = xI-pX[j];
-                        float rY = yI-pY[j];
-                        float r2 = rX*rX+rY*rY;
-                        if (r2>=smoothingR2||r2<1e-12f) continue;
+                        float dX = pPredX[j] - xI;
+                        float dY = pPredY[j] - yI;
+                        float d2 = dX*dX + dY*dY;
+                        if (d2 > smoothingR2 || d2 < 1e-12f) continue;
                         
-                        float r = (float) Math.sqrt(r2);
+                        float dst = (float) Math.sqrt(d2);
+                        float invDst = 1.0f / dst;
+                        float dirX = dX * invDst;
+                        float dirY = dY * invDst;
+                        
                         float rhoJ = density[j];
+                        float rhoNearJ = nearDensity[j];
                         float presJ = pressure[j];
+                        float nearPresJ = nearPressure[j];
                         
-                        Vec2 gradW = gradientKernel(rX, rY, r, smoothingRadius);
+                        float sharedPres = 0.5f * (presI + presJ);
+                        float sharedNearPres = 0.5f * (nearPresI + nearPresJ);
                         
-                        float presFactor = -mass*mass*(presI+presJ)/(2.0f*rhoJ);
+                        float dW = densityDerivative(dst);      // DerivativeSpikyPow2
+                        float dWNear = nearDensityDerivative(dst);  // DerivativeSpikyPow3
                         
-                        fX += presFactor*gradW.x;
-                        fY += presFactor*gradW.y;
+                        if (rhoJ > 1e-6f && sharedPres > 0.0f) {
+                            float scalar = dW * sharedPres / rhoJ;
+                            fX += dirX * scalar;
+                            fY += dirY * scalar;
+                        }
+                        if (rhoNearJ > 1e-6f && sharedNearPres > 0.0f) {
+                            float scalarNear = dWNear * sharedNearPres / rhoNearJ;
+                            fX += dirX * scalarNear;
+                            fY += dirY * scalarNear;
+                        }
+                        
+                        
+                        // Viscocity
+                        float wVisc = viscosityKernel(dst);  // Poly6
+                        float vJx = vX[j];
+                        float vJy = vY[j];
+                        
+                        // Pull towards neighbour velocity
+                        viscX += (vJx - vIx) * wVisc;
+                        viscY += (vJy - vIy) * wVisc;
+                        
                     }
                 }
             }
             
-            fY += mass*gravity;
+            aX[p] = 0.0f;
+            aY[p] = 0.0f;
             
-            aX[p] = fX/mass;
-            aY[p] = fY/mass;
+            if (rhoI > 1e-6f) {
+                aX[p] += fX / rhoI;
+                aY[p] += fY / rhoI;
+                aX[p] += viscosityStrength * viscX / rhoI;
+                aY[p] += viscosityStrength * viscY / rhoI;
+            }
+            else {
+                aX[p] += viscosityStrength * viscX;
+                aY[p] += viscosityStrength * viscY;
+            }
+            
+            aY[p] += mass*gravity;
         }
-        
-        
-        float minRho = Float.POSITIVE_INFINITY;
-        float maxRho = Float.NEGATIVE_INFINITY;
-        float sumRho = 0;
-        
-        for (int i = 0; i < numParticles; i++) {
-            float rho = density[i];
-            minRho = Math.min(minRho, rho);
-            maxRho = Math.max(maxRho, rho);
-            sumRho += rho;
-        }
-        float avgRho = sumRho / numParticles;
-        
-        Logger.debug("rho min=" + minRho + " max=" + maxRho + " avg=" + avgRho);
     }
     
     class Vec2 {
@@ -358,63 +532,54 @@ public class FluidDynamics extends ParticleVisualiser {
         Vec2(float x, float y) {this.x = x; this.y = y;}
     }
     
-    private Vec2 gradientKernel(float rX, float rY, float r, float h) {
-        if (r<=0.0f||r>=h) return new Vec2(0.0f, 0.0f);
-        float c = -45.0f/(float) (Math.PI*h*h*h*h*h*h);
-        float factor = c*(h-r)*(h-r)/r;
-        return new Vec2(rX*factor, rY*factor);
-    }
-    
     private void applyCollisionForces() {
-        float radius = pSize * 0.5f;
-        
-        // tune these:
-        float k = 500.0f;   // wall stiffness
-        float c = 20.0f;    // wall damping
-        
+        float radius = pSize*0.5f;
+
         for (int i = 0; i < numParticles; i++) {
             float x = pX[i];
             float y = pY[i];
             float vx = vX[i];
             float vy = vY[i];
             
-            float fx = 0.0f;
-            float fy = 0.0f;
-            
-            // LEFT wall (x >= radius)
-            float penLeft = radius - x;
-            if (penLeft > 0.0f) {
-                // normal = (1, 0)
-                fx += k * penLeft - c * vx;   // damp vx into wall
+            // LEFT wall: x >= radius
+            if (x < radius) {
+                x = radius;                 // snap out of wall
+                if (vx < 0.0f) {            // moving into wall?
+                    vx = -vx * collisionDamping; // bounce in x
+                }
             }
             
-            // RIGHT wall (x <= worldW - radius)
-            float penRight = (x + radius) - worldW;
-            if (penRight > 0.0f) {
-                // normal = (-1, 0)
-                fx += -k * penRight - c * vx;
+            // RIGHT wall: x <= worldW - radius
+            if (x > worldW-radius) {
+                x = worldW-radius;
+                if (vx > 0.0f) {            // moving into wall?
+                    vx = -vx * collisionDamping;
+                }
             }
             
-            // BOTTOM wall (y >= radius)
-            float penBottom = radius - y;
-            if (penBottom > 0.0f) {
-                // normal = (0, 1)
-                fy += k * penBottom - c * vy;
+            // BOTTOM wall: y >= radius
+            if (y<radius) {
+                y = radius;
+                if (vy < 0.0f) {
+                    vy = -vy * collisionDamping;
+                }
             }
             
-            // TOP wall (y <= worldH - radius)
-            float penTop = (y + radius) - worldH;
-            if (penTop > 0.0f) {
-                // normal = (0, -1)
-                fy += -k * penTop - c * vy;
+            // TOP wall: y <= worldH - radius
+            if (y>worldH-radius) {
+                y = worldH-radius;
+                if (vy > 0.0f) {
+                    vy = -vy * collisionDamping;
+                }
             }
             
-            // add to acceleration: a += F/m
-            aX[i] += fx / mass;
-            aY[i] += fy / mass;
+            pX[i] = x;
+            pY[i] = y;
+            vX[i] = vx;
+            vY[i] = vy;
         }
+        
     }
-    
     
     private void integrate(float dT) {
         for (int i=0; i<numParticles; i++) {
@@ -426,25 +591,26 @@ public class FluidDynamics extends ParticleVisualiser {
         }
     }
     
-    private void stepSimulation() {
-        //if (VBMain.getGlobalTick()>1) return;
-        float dT = 1.0f / 120.0f;
+    private void predictPositions(float dtPrediction) {
+        for (int i = 0; i < numParticles; i++) {
+            pPredX[i] = pX[i] + vX[i] * dtPrediction;
+            pPredY[i] = pY[i] + vY[i] * dtPrediction;
+        }
+    }
+    
+    private void stepSimulation(float dT) {
+        
+        predictPositions(dT); // try dt; later maybe dt * 0.25f
         clearSpatialLookup();
         buildSpatialLookup();
+        
         computeDensityAndPressure();
-        
-        //Logger.debugArray(density);
-        //Logger.debugArray(pressure);
-        
-        
-        calculateForces();
-        applyCollisionForces();
-        
-        //Logger.debugArray(aX);
-        //Logger.debugArray(aY);
-        Logger.ln();
+        applyForces();
         
         integrate(dT);
+        applyCollisionForces();
+        
+        if (debug && VBMain.isTickIncrement(20)) debug();
     }
     
 }

@@ -51,6 +51,15 @@ public class Logger {
         }
         debug(getCaller().getSimpleName(), s+"]");
     }
+
+    public static void debugArray(boolean[] a) {
+        String s = "[";
+        for (int i=0; i<a.length; i++) {
+            s += a[i];
+            if (i<a.length-1) s +=", ";
+        }
+        debug(getCaller().getSimpleName(), s+"]");
+    }
     
     public static void error(String m) {
         System.err.println(LogColorEnum.RED.ansi+"[ERROR] ["+getCaller().getSimpleName()+"]: "+m+LogColorEnum.RESET.ansi);
