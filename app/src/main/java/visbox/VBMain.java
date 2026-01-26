@@ -7,6 +7,7 @@ import javax.swing.Timer;
 
 import visbox.logger.Logger;
 import visbox.ui.GLFWUI;
+import visbox.ui.IO;
 import visbox.visualiser.Visualiser;
 import visbox.visualiser.bars.ClassicBars;
 import visbox.visualiser.bars.ClipBounce;
@@ -136,6 +137,8 @@ public class VBMain {
             deltaTime = (now-lastTime) * 1e-9f;
             lastTime = now;
             globalTick++;
+
+            IO.update();
             
             // Exit condition
             if (!ui.windowAlive()) running = false;

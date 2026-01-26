@@ -88,13 +88,8 @@ public class GLFWUI {
         if (window == NULL) {
             throw new RuntimeException("Failed to create GLFW window");
         }
-        
-        // ESC closes window
-        glfwSetKeyCallback(window, (win, key, scancode, action, mods) -> {
-            if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-                glfwSetWindowShouldClose(win, true);
-            }
-        });
+        IO.setWindow(window);
+        IO.setupCallbacks();
         
         // Center the window on the main monitor
         long monitor = glfwGetPrimaryMonitor();
